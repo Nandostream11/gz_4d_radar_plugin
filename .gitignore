@@ -1,0 +1,48 @@
+# ROS 2 Colcon build artifacts
+build/
+install/
+log/
+.colcon/
+
+# C / C++ build artifacts
+*.o
+*.obj
+*.so
+*.so.*
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+compile_commands.json
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+.pytest_cache/
+.coverage
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.directory
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs & Temporary files
+*.log
+*.tmp
+*.bak
