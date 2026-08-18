@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>gazebo_4d_radar_plugin</name>
+  <version>1.0.0</version>
+  <description>Gazebo Sim sensor plugin for 4D FMCW MIMO Automotive Imaging Radar</description>
+  <maintainer email="dev@example.com">Radar Plugin Developer</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>radar_msgs</depend>
+  <depend>radar_physics_core</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <gazebo_sim plugin="${prefix}/lib/libgazebo_4d_radar_plugin.so"/>
+  </export>
+</package>

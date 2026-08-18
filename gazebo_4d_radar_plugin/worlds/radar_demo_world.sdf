@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <world name="radar_demo_world">
+    <!-- Physics engine -->
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Standard plugins -->
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+
+    <!-- Lighting -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Ground Plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>500 500</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>500 500</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Front Flat Wall (for Cosine Doppler Profile Verification at 30m) -->
+    <model name="flat_wall">
+      <static>true</static>
+      <pose>30 0 2.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.5 40.0 5.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.5 40.0 5.0</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.2 0.2 1</ambient>
+            <diffuse>0.7 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Static Target Vehicle / Obstacle -->
+    <model name="obstacle_car">
+      <static>true</static>
+      <pose>18.0 -3.0 0.75 0 0 0.2</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>4.5 2.0 1.5</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>4.5 2.0 1.5</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.2 0.7 1</ambient>
+            <diffuse>0.2 0.3 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Moving Ego Platform with Downward-Tilted 4D Radar -->
+    <model name="ego_radar_platform">
+      <pose>0 0 1.5 0 0.785398 0</pose>  <!-- Mounted at 1.5m height, tilted 45 deg downward -->
+      <link name="base_link">
+        <inertial>
+          <mass>10.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <iyy>0.1</iyy>
+            <izz>0.1</izz>
+          </inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.2 0.2 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.1 1</ambient>
+            <diffuse>0.9 0.9 0.2 1</diffuse>
+          </material>
+        </visual>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.2 0.2 0.1</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Attach 4D Radar System Plugin -->
+        <plugin
+          filename="libgazebo_4d_radar_plugin.so"
+          name="gazebo_4d_radar_plugin::Gazebo4DRadarPlugin">
+          <sensor_name>radar</sensor_name>
+          <frame_id>radar_link</frame_id>
+          <scan_topic>/radar/scan</scan_topic>
+          <pointcloud_topic>/radar/points</pointcloud_topic>
+          <cycle_rate_hz>20.0</cycle_rate_hz>
+          <max_range_m>150.0</max_range_m>
+          <min_range_m>0.3</min_range_m>
+          <fov_azimuth_rad>2.0944</fov_azimuth_rad>
+          <fov_elevation_rad>0.5236</fov_elevation_rad>
+          <v_max_mps>55.55</v_max_mps>
+          <enable_doppler_folding>true</enable_doppler_folding>
+          <closing_velocity_positive>false</closing_velocity_positive>
+          <range_sigma_m>0.05</range_sigma_m>
+          <azimuth_sigma_rad>0.0052</azimuth_sigma_rad>
+          <elevation_sigma_rad>0.0105</elevation_sigma_rad>
+          <range_rate_sigma_mps>0.05</range_rate_sigma_mps>
+          <false_detection_rate_per_cycle>2.0</false_detection_rate_per_cycle>
+          <detection_dropout_probability>0.03</detection_dropout_probability>
+          <min_rcs_threshold>-30.0</min_rcs_threshold>
+          <ray_samples_azimuth>120</ray_samples_azimuth>
+          <ray_samples_elevation>30</ray_samples_elevation>
+        </plugin>
+      </link>
+    </model>
+  </world>
+</sdf>
