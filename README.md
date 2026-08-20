@@ -1,147 +1,139 @@
 # Gazebo 4D Imaging Radar Plugin
 
-A modular, high-fidelity Gazebo Sim (`gz-sim`) sensor plugin simulating **4D FMCW MIMO Automotive Imaging Radars** (77 GHz / 24 GHz / 60 GHz / 79 GHz). It outputs per-detection range, azimuth, elevation, and direct range-rate (Doppler), publishing to standard ROS 2 interfaces (`radar_msgs/msg/RadarScan`, `sensor_msgs/msg/PointCloud2`).
+[![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Iron%20%7C%20Jazzy%20%7C%20Rolling-blue.svg)](https://docs.ros.org/)
+[![Gazebo Sim](https://img.shields.io/badge/Gazebo%20Sim-Harmonic%20%7C%20Fortress%20%7C%20Garden-orange.svg)](https://gazebosim.org/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
-This plugin is specifically engineered for downstream **instantaneous ego-velocity estimators** (e.g. 3-point RANSAC Doppler solvers such as Kellner et al., REVE, and Radar-Inertial Odometry).
+A Gazebo Sim (`gz-sim`) sensor system plugin that simulates **4D FMCW MIMO Automotive Imaging Radars** (77 GHz / 24 GHz / 60 GHz / 79 GHz). It generates realistic point-level radar returns with 3D Cartesian coordinates, range, azimuth, elevation, Doppler radial velocity, and RCS, published over standard ROS 2 interfaces.
 
----
-
-## 1. Physics Engine & Math Specifications
-
-### 1.1 Translation-Only Doppler (Range-Rate)
-For a static world point at position $\mathbf{p}$ relative to the sensor origin, where the sensor translates with velocity $\mathbf{v}_s$ (world frame):
-$$\hat{\mathbf{u}} = \frac{\mathbf{p}}{\|\mathbf{p}\|} \quad (\text{unit line-of-sight})$$
-$$\dot{r} = -\mathbf{v}_s \cdot \hat{\mathbf{u}}$$
-
-- **Platform Rotation Invariance**: Sensor rotation about its own origin produces zero distance change to fixed world targets and therefore does **not** contribute to $\dot{r}$.
-- **Sign Convention**: Approaching targets have negative range-rate ($\dot{r} = \frac{dr}{dt} < 0$). Exposes `<closing_velocity_positive>` parameter to invert if desired.
-
-### 1.2 Doppler Ambiguity & Nyquist Folding
-FMCW radars exhibit velocity ambiguity determined by the chirp repetition interval. Speeds exceeding $v_{\max}$ fold periodically:
-$$\dot{r}_{\text{reported}} = ((\dot{r}_{\text{true}} + v_{\max}) \bmod 2v_{\max}) - v_{\max}$$
-
-The plugin models this non-ideality to prevent sim-to-real divergence in RANSAC solvers, with an enable/disable switch `<enable_doppler_folding>`.
-
-### 1.3 Scatterer Energy & RCS Falloff
-The apparent received power is modeled following the radar range equation and Lambertian/diffuse cosine scattering:
-$$P_{\text{rx}} \propto \frac{\sigma \cdot \cos(\alpha) \cdot \rho}{R^4}$$
-where $\alpha = \arccos(-\hat{\mathbf{u}} \cdot \hat{\mathbf{n}})$ is the surface incidence angle and $\rho$ is surface reflectivity. Returns below `<min_rcs_threshold>` are filtered out.
+Designed for testing and validating downstream **radar ego-velocity estimators** (e.g. 3-point Doppler RANSAC solvers), Radar-Inertial Odometry (RIO), and multi-sensor perception pipelines.
 
 ---
 
-## 2. Package Architecture
+## Features
 
-```
-plugin/
-├── radar_msgs/                      # Standard ROS 2 radar message package
-│   ├── msg/
-│   │   ├── RadarReturn.msg         # Single 4D radar return (range, az, el, doppler, amp)
-│   │   └── RadarScan.msg           # Array of radar returns with standard Header
-│   ├── CMakeLists.txt
-│   └── package.xml
-│
-├── radar_physics_core/              # Modular C++ physics, noise & folding engine
-│   ├── include/radar_physics_core/
-│   │   ├── radar_types.hpp         # Configuration and detection structures
-│   │   └── radar_physics.hpp       # Kinematics, folding, and RCS methods
-│   ├── src/
-│   │   └── radar_physics.cpp
-│   ├── test/
-│   │   └── test_radar_physics.cpp  # GTest physics validation suite
-│   ├── CMakeLists.txt
-│   └── package.xml
-│
-├── gazebo_4d_radar_plugin/          # Gazebo Sim System Plugin & ROS 2 Bridge
-│   ├── include/gazebo_4d_radar_plugin/
-│   │   └── Gazebo4DRadarPlugin.hpp
-│   ├── src/
-│   │   └── Gazebo4DRadarPlugin.cpp
-│   ├── models/
-│   │   └── generic_4d_radar/       # Generic 4D radar model definition
-│   ├── worlds/                     # Demo simulation world with ground clutter
-│   ├── launch/                     # ROS 2 launch files
-│   ├── rviz/                       # RViz2 Doppler pointcloud visualization
-│   ├── CMakeLists.txt
-│   └── package.xml
-│
-└── scripts/
-    └── verify_radar_physics.py      # Standalone unittest verification suite
-```
+- **Kinematic Doppler Accuracy**: Exact line-of-sight range-rate ($\dot{r} = -\mathbf{v}_s \cdot \hat{\mathbf{u}}$) driven solely by relative translation; sensor rotations about its own origin produce zero radial velocity.
+- **FMCW Doppler Folding**: Models Nyquist velocity ambiguity wrapping periodically across $[-v_{\max}, +v_{\max}]$.
+- **Radar Range Equation**: Incorporates $1/R^4$ power falloff, Lambertian cosine angle-of-incidence attenuation, and material reflectivity.
+- **Sensor Non-Idealities**: Configurable Gaussian measurement noise, quantization bins, Poisson clutter/false detections, and detection dropouts.
+- **Standard ROS 2 Interfaces**: Publishes structured `radar_msgs/msg/RadarScan` and standard `sensor_msgs/msg/PointCloud2`.
 
 ---
 
-## 3. Configuration Parameters
+## Supported Environments
 
-| SDF Element | Type | Default | Description |
-|---|---|---|---|
-| `<sensor_name>` | string | `radar` | Name of radar sensor |
-| `<frame_id>` | string | `radar_link` | ROS 2 TF frame ID |
-| `<scan_topic>` | string | `/radar/scan` | Standard `radar_msgs/msg/RadarScan` topic |
-| `<pointcloud_topic>` | string | `/radar/points` | Standard `sensor_msgs/msg/PointCloud2` topic |
-| `<publish_radar_scan>` | bool | `true` | Publish standard RadarScan messages |
-| `<publish_pointcloud>` | bool | `true` | Publish standard PointCloud2 messages |
-| `<cycle_rate_hz>` | double | `20.0` | Scan rate in Hz (10–50 Hz) |
-| `<max_range_m>` | double | `300.0` | Maximum operational range |
-| `<min_range_m>` | double | `0.2` | Minimum detection range |
-| `<fov_azimuth_rad>` | double | `2.0944` | Azimuth FOV (120°, ±60°) |
-| `<fov_elevation_rad>` | double | `0.5236` | Elevation FOV (30°, ±15°) |
-| `<v_max_mps>` | double | `50.0` | Maximum unambiguous velocity |
-| `<enable_doppler_folding>`| bool | `true` | Enable FMCW velocity folding |
-| `<closing_velocity_positive>` | bool | `false` | Sign convention toggle |
-| `<range_sigma_m>` | double | `0.05` | Range Gaussian noise standard dev |
-| `<azimuth_sigma_rad>` | double | `0.0052` | Azimuth noise (~0.3°) |
-| `<elevation_sigma_rad>` | double | `0.0105` | Elevation noise (~0.6°) |
-| `<range_rate_sigma_mps>` | double | `0.05` | Doppler noise standard dev (5 cm/s) |
-| `<range_resolution_m>` | double | `0.02` | Range quantization bin |
-| `<azimuth_resolution_rad>`| double | `0.00175`| Azimuth quantization bin (~0.1°) |
-| `<elevation_resolution_rad>`| double | `0.00349`| Elevation quantization bin (~0.2°) |
-| `<range_rate_resolution_mps>`| double | `0.01` | Doppler quantization bin (1 cm/s) |
-| `<false_detection_rate_per_cycle>` | double | `2.0` | Poisson mean clutter count |
-| `<detection_dropout_probability>` | double | `0.03` | Random dropout probability |
-| `<min_rcs_threshold>` | double | `-25.0` | Minimum RCS cutoff in dBm² |
+| Software | Supported Versions |
+|---|---|
+| **ROS 2** | Humble, Iron, Jazzy, Rolling |
+| **Gazebo Sim** | Gz Harmonic (`gz-sim8`), Gz Fortress (`gz-sim6`), Gz Garden (`gz-sim7`) |
+| **OS** | Ubuntu 22.04 / 24.04 (Linux / WSL2) |
 
 ---
 
-## 4. Build and Run
+## Quick Start
 
-### 4.1 Building in a ROS 2 Workspace
+### 1. Build the Workspace
+Clone into your ROS 2 workspace `src/` directory and build:
+
 ```bash
+cd ~/ros2_ws/src
+git clone https://github.com/Nandostream11/gz_4d_radar_plugin.git
+cd ~/ros2_ws
 colcon build --symlink-install
 source install/setup.bash
 ```
 
-### 4.2 Running the Physics Test Suite
-```bash
-# Run GTest suite
-colcon test --packages-select radar_physics_core
-colcon test-result --verbose
+### 2. Run the Demo Simulation
+Launch Gazebo Sim with a sample test world and RViz2 visualization:
 
-# Run standalone Python verification
-python3 scripts/verify_radar_physics.py
-```
-
-### 4.3 Launching Demo Simulation in Gazebo Sim & RViz2
 ```bash
 ros2 launch gazebo_4d_radar_plugin radar_sim.launch.py
 ```
 
-### 4.4 Inspecting Topics
+### 3. Run Unit Tests
 ```bash
-# Echo generic radar scan
-ros2 topic echo /radar/scan
-
-# Check publication rate (20 Hz)
-ros2 topic hz /radar/scan
+colcon test --packages-select radar_physics_core
+colcon test-result --verbose
 ```
 
 ---
 
-## 5. References
+## SDF Integration
 
-- Kellner, Barjenbruch, Klappstein, Dickmann, Dietmayer, *Instantaneous Ego-Motion Estimation using Doppler Radar*, ITSC 2013.
-- Kellner et al., *Instantaneous Ego-Motion Estimation using Multiple Doppler Radars*, ICRA 2014.
-- Doer & Trommer, *An EKF Based Approach to Radar Inertial Odometry*, MFI 2020. Reference: [reve](https://github.com/christopherdoer/reve).
-- Nyquist-zone Doppler folding: arXiv:2408.05811 §III-A.
+To attach the radar to any robot link in Gazebo, insert the `<plugin>` block:
+
+```xml
+<link name="radar_link">
+  <!-- Sensor visual and collision definitions -->
+  
+  <plugin
+    filename="libgazebo_4d_radar_plugin.so"
+    name="gazebo_4d_radar_plugin::Gazebo4DRadarPlugin">
+    <sensor_name>radar</sensor_name>
+    <frame_id>radar_link</frame_id>
+    <scan_topic>/radar/scan</scan_topic>
+    <pointcloud_topic>/radar/points</pointcloud_topic>
+    <cycle_rate_hz>20.0</cycle_rate_hz>
+    <max_range_m>150.0</max_range_m>
+    <min_range_m>0.3</min_range_m>
+    <fov_azimuth_rad>2.0944</fov_azimuth_rad>     <!-- 120 deg -->
+    <fov_elevation_rad>0.5236</fov_elevation_rad>  <!-- 30 deg -->
+    <v_max_mps>50.0</v_max_mps>
+    <enable_doppler_folding>true</enable_doppler_folding>
+  </plugin>
+</link>
+```
+
+---
+
+## ROS 2 Interfaces
+
+### Published Topics
+
+| Topic | Type | Description |
+|---|---|---|
+| `/radar/scan` | `radar_msgs/msg/RadarScan` | Per-detection range, azimuth, elevation, Doppler, amplitude |
+| `/radar/points` | `sensor_msgs/msg/PointCloud2` | 3D points with `x, y, z, doppler, range, azimuth, elevation, rcs` fields |
+
+---
+
+## Configuration Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `<sensor_name>` | string | `radar` | Sensor node identifier |
+| `<frame_id>` | string | `radar_link` | TF coordinate frame |
+| `<scan_topic>` | string | `/radar/scan` | Topic for standard radar scan messages |
+| `<pointcloud_topic>` | string | `/radar/points` | Topic for PointCloud2 messages |
+| `<cycle_rate_hz>` | double | `20.0` | Update frequency (10–50 Hz) |
+| `<max_range_m>` | double | `300.0` | Maximum operational detection range (m) |
+| `<min_range_m>` | double | `0.2` | Minimum detection range (m) |
+| `<fov_azimuth_rad>` | double | `2.0944` | Horizontal field-of-view (rad) |
+| `<fov_elevation_rad>` | double | `0.5236` | Vertical field-of-view (rad) |
+| `<v_max_mps>` | double | `50.0` | Maximum unambiguous Doppler velocity ($v_{\max}$) |
+| `<enable_doppler_folding>`| bool | `true` | Enable FMCW Nyquist velocity folding |
+| `<closing_velocity_positive>` | bool | `false` | Invert Doppler sign convention ($\dot{r} < 0$ approaching) |
+| `<range_sigma_m>` | double | `0.05` | Range Gaussian noise standard deviation (m) |
+| `<azimuth_sigma_rad>` | double | `0.0052` | Azimuth noise standard deviation (rad) |
+| `<elevation_sigma_rad>` | double | `0.0105` | Elevation noise standard deviation (rad) |
+| `<range_rate_sigma_mps>` | double | `0.05` | Doppler noise standard deviation (m/s) |
+| `<range_resolution_m>` | double | `0.02` | Range quantization resolution (m) |
+| `<azimuth_resolution_rad>`| double | `0.00175` | Azimuth quantization resolution (rad) |
+| `<elevation_resolution_rad>`| double | `0.00349` | Elevation quantization resolution (rad) |
+| `<range_rate_resolution_mps>`| double | `0.01` | Doppler quantization resolution (m/s) |
+| `<false_detection_rate_per_cycle>` | double | `2.0` | Mean Poisson false/clutter detections per cycle |
+| `<detection_dropout_probability>` | double | `0.03` | Probability of target dropout $[0, 1)$ |
+| `<min_rcs_threshold>` | double | `-25.0` | Minimum RCS detection threshold ($\text{dBm}^2$) |
+
+---
+
+## Documentation & Wiki
+
+Detailed technical documentation and derivations are available in the [`docs/`](docs/) directory:
+
+- [Physics Models & Sensor Non-Idealities](docs/physics_models.md): Complete mathematical derivations of kinematics, Doppler folding, and RCS falloff.
+- [Integration Guide](docs/integration_guide.md): Multi-radar setups, coordinate transforms, and RViz visualization.
+- [Algorithms & References](docs/algorithms_and_citations.md): Doppler velocity solvers (3-point RANSAC) and academic citations.
 
 ---
 
