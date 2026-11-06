@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "radar_physics_core/radar_physics.hpp"
+#include "radar_physics_core/scene_raycaster.hpp"
 
 using namespace radar_physics_core;
 
@@ -81,7 +82,6 @@ TEST_F(RadarPhysicsTest, PureTranslationCosineDopplerProfile) {
 
   for (double az_deg = -50.0; az_deg <= 50.0; az_deg += 10.0) {
     double az_rad = az_deg * M_PI / 180.0;
-    double range = wall_x / std::cos(az_rad);
 
     RawRayHit hit;
     hit.hit_point_world[0] = wall_x;
@@ -106,27 +106,80 @@ TEST_F(RadarPhysicsTest, PureTranslationCosineDopplerProfile) {
 // Validation Test 3: Pure Sensor Origin Rotation Invariance
 // ============================================================================
 TEST_F(RadarPhysicsTest, PureRotationInvariance) {
-  // Rotating the sensor about its own origin does not change target range distance.
-  // Translating velocity v_s = [0, 0, 0].
+  // A sensor spinning about its own origin has zero origin velocity, regardless of
+  // angular rate. The plugin derives the origin velocity with
+  // sensor_origin_velocity(); with zero mounting offset the angular term vanishes.
+  const Vec3 w{0.3, -1.2, 2.5};
+  const Vec3 v_origin = sensor_origin_velocity(Vec3{0, 0, 0}, w, Vec3{0, 0, 0});
+  EXPECT_NEAR(v_origin.norm(), 0.0, 1e-12);
+
+  // With a lever arm the origin does move: v = w x r.
+  const Vec3 r{1.0, 0.0, 0.0};
+  const Vec3 v_lever = sensor_origin_velocity(Vec3{0, 0, 0}, Vec3{0, 0, 2.0}, r);
+  EXPECT_NEAR(v_lever.x, 0.0, 1e-12);
+  EXPECT_NEAR(v_lever.y, 2.0, 1e-12);
+  EXPECT_NEAR(v_lever.z, 0.0, 1e-12);
+
+  // The detection itself must then report zero Doppler for any sensor attitude.
   double sensor_pos[3] = {5.0, 2.0, 1.0};
-  double rot_yaw_45[9] = {
-      std::cos(M_PI / 4), -std::sin(M_PI / 4), 0.0,
-      std::sin(M_PI / 4),  std::cos(M_PI / 4), 0.0,
-      0.0,                 0.0,                1.0};
-  double sensor_vel[3] = {0.0, 0.0, 0.0};  // Zero translation
+  const double c = std::cos(M_PI / 4), s = std::sin(M_PI / 4);
+  double world_to_sensor_yaw45[9] = {c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0};
+  double sensor_vel[3] = {v_origin.x, v_origin.y, v_origin.z};
 
   RawRayHit hit;
-  hit.hit_point_world[0] = 20.0;
-  hit.hit_point_world[1] = 10.0;
+  hit.hit_point_world[0] = 5.0 + 10.0 * c;
+  hit.hit_point_world[1] = 2.0 + 10.0 * s;
   hit.hit_point_world[2] = 1.0;
-  hit.hit_normal_world[0] = -1.0;
-  hit.hit_normal_world[1] = 0.0;
-  hit.hit_normal_world[2] = 0.0;
+  hit.hit_normal_world[0] = -c;
+  hit.hit_normal_world[1] = -s;
   hit.nominal_rcs_dbm2 = 15.0;
 
-  auto det = engine_.process_ray_hit(sensor_pos, rot_yaw_45, sensor_vel, hit, 1);
+  auto det = engine_.process_ray_hit(sensor_pos, world_to_sensor_yaw45, sensor_vel, hit, 1);
   ASSERT_TRUE(det.has_value());
-  EXPECT_NEAR(det->range_rate_mps, 0.0, 1e-6);
+  EXPECT_NEAR(det->range_rate_mps, 0.0, 1e-9);
+  // Target lies on the yawed boresight: azimuth must be zero in the sensor frame.
+  EXPECT_NEAR(det->azimuth_rad, 0.0, 1e-9);
+  EXPECT_NEAR(det->range_m, 10.0, 1e-9);
+}
+
+// ============================================================================
+// Rotated sensor + translation: azimuth sign and Doppler use the correct frames
+// ============================================================================
+TEST_F(RadarPhysicsTest, RotatedSensorFrameConventions) {
+  // Sensor yawed +90 deg (boresight along world +y), moving along world +x.
+  double sensor_pos[3] = {0.0, 0.0, 0.0};
+  double world_to_sensor_yaw90[9] = {0, 1, 0, -1, 0, 0, 0, 0, 1};
+  double sensor_vel[3] = {4.0, 0.0, 0.0};
+
+  // Target at world +x is on the sensor's RIGHT => azimuth -90 deg (+y left convention),
+  // and the sensor is closing on it at 4 m/s => range-rate -4 m/s.
+  RawRayHit hit;
+  hit.hit_point_world[0] = 10.0;
+  hit.hit_normal_world[0] = -1.0;
+  hit.nominal_rcs_dbm2 = 30.0;
+
+  config_.fov_azimuth_min_rad = -M_PI;
+  config_.fov_azimuth_max_rad = M_PI;
+  engine_.set_config(config_);
+  auto det = engine_.process_ray_hit(sensor_pos, world_to_sensor_yaw90, sensor_vel, hit, 1);
+  ASSERT_TRUE(det.has_value());
+  EXPECT_NEAR(det->azimuth_rad, -M_PI / 2, 1e-9);
+  EXPECT_NEAR(det->range_rate_mps, -4.0, 1e-9);
+}
+
+// ============================================================================
+// Smooth (specular) surfaces return less at oblique incidence than rough ones
+// ============================================================================
+TEST_F(RadarPhysicsTest, IncidenceExponentModelsSpecularSurfaces) {
+  const double los[3] = {std::cos(0.1), 0.0, -std::sin(0.1)};  // grazing: ~84 deg off-normal
+  const double up[3] = {0.0, 0.0, 1.0};
+  const double rough = RadarPhysicsEngine::compute_apparent_rcs(5.0, 10.0, los, up, 1.0, 4.0, 1.0);
+  const double smooth = RadarPhysicsEngine::compute_apparent_rcs(5.0, 10.0, los, up, 1.0, 4.0, 8.0);
+  EXPECT_LT(smooth, rough - 10.0);
+  // At normal incidence the exponent has no effect.
+  const double down[3] = {0.0, 0.0, -1.0};
+  EXPECT_NEAR(RadarPhysicsEngine::compute_apparent_rcs(5.0, 10.0, down, up, 1.0, 4.0, 8.0),
+              RadarPhysicsEngine::compute_apparent_rcs(5.0, 10.0, down, up, 1.0, 4.0, 1.0), 1e-9);
 }
 
 // ============================================================================

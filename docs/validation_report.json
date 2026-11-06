@@ -1,0 +1,83 @@
+[
+  {
+    "name": "1_static_platform",
+    "passed": true,
+    "metrics": {
+      "scans": 20,
+      "detections": 9919,
+      "fraction_within_tol": 0.9947,
+      "residual_rms_inliers": 0.0501
+    },
+    "notes": []
+  },
+  {
+    "name": "2_translation_cosine_profile",
+    "passed": true,
+    "metrics": {
+      "scans": 31,
+      "detections": 17130,
+      "fraction_within_tol": 0.9964,
+      "residual_rms_inliers": 0.0498,
+      "wall_detections_per_scan": 146.5
+    },
+    "notes": []
+  },
+  {
+    "name": "3_pure_rotation_zero_doppler",
+    "passed": true,
+    "metrics": {
+      "scans": 20,
+      "detections": 7527,
+      "fraction_within_tol": 0.9931,
+      "residual_rms_inliers": 0.0504
+    },
+    "notes": []
+  },
+  {
+    "name": "4a_ramp_below_vmax_no_folding",
+    "passed": true,
+    "metrics": {
+      "scans": 14,
+      "detections": 6248,
+      "fraction_within_tol": 0.9954,
+      "residual_rms_inliers": 0.0503
+    },
+    "notes": []
+  },
+  {
+    "name": "4b_ramp_above_vmax_folding",
+    "passed": true,
+    "metrics": {
+      "scans": 14,
+      "detections": 5333,
+      "fraction_within_tol": 0.9946,
+      "residual_rms_inliers": 0.0495,
+      "fraction_expected_folded": 0.338,
+      "mean_reported_where_folded": -52.88
+    },
+    "notes": []
+  },
+  {
+    "name": "5_round_trip_ransac_ego_velocity",
+    "passed": true,
+    "metrics": {
+      "estimates": 45,
+      "median_error_mps": 0.0171,
+      "p95_error_mps": 0.0397,
+      "ground_truth_topic_max_error_mps": 0.0
+    },
+    "notes": []
+  },
+  {
+    "name": "6_moving_target_doppler",
+    "passed": true,
+    "metrics": {
+      "scans": 30,
+      "detections": 1072,
+      "fraction_within_tol": 1.0,
+      "residual_rms_inliers": 0.048,
+      "detections_per_scan": 35.7
+    },
+    "notes": []
+  }
+]

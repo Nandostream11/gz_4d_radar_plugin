@@ -70,6 +70,7 @@ class RadarPhysicsEngine {
    * @param normal_world Surface normal at hit point.
    * @param surface_reflectivity Material reflection coefficient [0..1].
    * @param power_falloff_exp Falloff exponent (e.g. 4.0 for radar).
+   * @param incidence_exponent Exponent n on cos(incidence); 1 = diffuse, >1 = specular.
    * @return Received apparent RCS in dBm^2.
    */
   static double compute_apparent_rcs(
@@ -78,7 +79,8 @@ class RadarPhysicsEngine {
       const double unit_los_world[3],
       const double normal_world[3],
       double surface_reflectivity = 1.0,
-      double power_falloff_exp = 4.0);
+      double power_falloff_exp = 4.0,
+      double incidence_exponent = 1.0);
 
   /**
    * @brief Process a raw raycast hit into a full 4D radar detection.
@@ -87,7 +89,9 @@ class RadarPhysicsEngine {
    *
    * @param sensor_pos_world Sensor origin position [x, y, z] in world frame.
    * @param sensor_rot_world_to_sensor 3x3 rotation matrix from world to sensor frame (row-major).
-   * @param sensor_linear_vel_world Sensor origin translation velocity [vx, vy, vz] in world frame.
+   * @param sensor_linear_vel_world Velocity of the sensor origin RELATIVE to the hit
+   *        scatterer (v_sensor - v_target_point), world frame. For a static world
+   *        this is simply the sensor origin velocity.
    * @param raw_hit Surface hit information.
    * @param measurement_id Sequential measurement index.
    * @return Valid RadarDetection or std::nullopt if dropped (FOV/RCS/dropout).

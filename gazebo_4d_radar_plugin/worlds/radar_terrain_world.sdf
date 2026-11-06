@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!--
+  Target application from the design handoff: a radar tilted 45 deg downward on
+  an aerial platform flying over natural terrain, where ground returns dominate.
+  The terrain is the mesh reconstructed by scripts/gazebo_terrain_pipeline.
+  Drive the drone with:
+    gz topic -t /model/survey_drone/cmd_vel -m gz.msgs.Twist -p 'linear: {x: 8}'
+-->
+<sdf version="1.9">
+  <world name="radar_terrain_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <include>
+      <uri>model://reconstructed_gazebo_terrain</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <model name="survey_drone">
+      <pose>15 0 30 0 0 0</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia><ixx>0.02</ixx><iyy>0.02</iyy><izz>0.04</izz></inertia>
+        </inertial>
+        <visual name="body">
+          <geometry><box><size>0.5 0.5 0.12</size></box></geometry>
+          <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.3 0.3 0.3 1</diffuse></material>
+        </visual>
+      </link>
+        <plugin filename="libgazebo_4d_radar_plugin.so"
+                name="gazebo_4d_radar_plugin::Gazebo4DRadarPlugin">
+          <sensor_name>radar</sensor_name>
+          <link_name>base_link</link_name>
+          <frame_id>radar_link</frame_id>
+          <scan_topic>/radar/scan</scan_topic>
+          <pointcloud_topic>/radar/points</pointcloud_topic>
+          <ground_truth_topic>/radar/ground_truth_velocity</ground_truth_topic>
+          <!-- Nose of the drone, tilted 45 deg downward. -->
+          <mounting_pose>0.25 0 -0.05 0 0.785398 0</mounting_pose>
+          <cycle_rate_hz>20.0</cycle_rate_hz>
+          <max_range_m>300.0</max_range_m>
+          <min_range_m>0.3</min_range_m>
+          <fov_azimuth_rad>2.0944</fov_azimuth_rad>
+          <fov_elevation_rad>0.5236</fov_elevation_rad>
+          <v_max_mps>55.55</v_max_mps>
+          <enable_doppler_folding>true</enable_doppler_folding>
+          <range_rate_sigma_mps>0.05</range_rate_sigma_mps>
+          <false_detection_rate_per_cycle>2.0</false_detection_rate_per_cycle>
+          <detection_dropout_probability>0.03</detection_dropout_probability>
+          <min_rcs_threshold>-40.0</min_rcs_threshold>
+          <ray_samples_azimuth>120</ray_samples_azimuth>
+          <ray_samples_elevation>30</ray_samples_elevation>
+          <!-- Natural terrain: rough, diffuse scatterer. -->
+          <surface model="reconstructed_gazebo_terrain">
+            <reflectivity>0.7</reflectivity>
+            <nominal_rcs_dbm2>5.0</nominal_rcs_dbm2>
+            <incidence_exponent>1.0</incidence_exponent>
+          </surface>
+        </plugin>
+      <plugin filename="gz-sim-velocity-control-system"
+              name="gz::sim::systems::VelocityControl"/>
+    </model>
+  </world>
+</sdf>

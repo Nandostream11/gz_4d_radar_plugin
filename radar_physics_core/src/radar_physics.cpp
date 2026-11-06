@@ -63,7 +63,8 @@ double RadarPhysicsEngine::compute_apparent_rcs(
     const double unit_los_world[3],
     const double normal_world[3],
     double surface_reflectivity,
-    double power_falloff_exp) {
+    double power_falloff_exp,
+    double incidence_exponent) {
   // Dot product of unit LOS and surface normal for incidence angle
   // LOS is directed from sensor to target, normal points outward from surface
   double cos_inc = -(unit_los_world[0] * normal_world[0] +
@@ -75,8 +76,9 @@ double RadarPhysicsEngine::compute_apparent_rcs(
   double r_norm = std::max(1.0, range_m / 10.0);
 
   // Apparent RCS in dBm^2 including 1/R^falloff and diffuse cosine scattering
+  const double n_inc = std::max(0.0, incidence_exponent);
   double rcs_apparent = nominal_rcs_dbm2 +
-                        10.0 * std::log10(cos_inc) +
+                        10.0 * n_inc * std::log10(cos_inc) +
                         10.0 * std::log10(refl) -
                         10.0 * power_falloff_exp * std::log10(r_norm);
 
@@ -146,7 +148,8 @@ std::optional<RadarDetection> RadarPhysicsEngine::process_ray_hit(
       unit_los_w,
       raw_hit.hit_normal_world,
       raw_hit.surface_reflectivity,
-      config_.power_falloff_exponent);
+      config_.power_falloff_exponent,
+      raw_hit.incidence_exponent);
 
   if (app_rcs < config_.min_rcs_threshold_dbm2) {
     return std::nullopt;

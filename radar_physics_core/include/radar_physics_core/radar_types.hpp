@@ -95,6 +95,9 @@ struct RawRayHit {
   double hit_normal_world[3]{0, 0, 0};
   double surface_reflectivity{1.0};  // [0..1]
   double nominal_rcs_dbm2{10.0};     // Object base RCS
+  // Exponent on cos(incidence): 1 = rough/diffuse, >1 = smooth/specular surface
+  // that returns little energy at oblique incidence (water, asphalt, glass).
+  double incidence_exponent{1.0};
   uint8_t classification{0};
 };
 

@@ -110,10 +110,13 @@
       </link>
     </model>
 
-    <!-- Moving Ego Platform with Downward-Tilted 4D Radar -->
+    <!-- Ego platform (level, gravity-free, driven via /model/ego_radar_platform/cmd_vel)
+         carrying an automotive-style radar 1.5 m up, tilted 10 deg down via
+         <mounting_pose>, so it sees the ground, the car and the wall. -->
     <model name="ego_radar_platform">
-      <pose>0 0 1.5 0 0.785398 0</pose>  <!-- Mounted at 1.5m height, tilted 45 deg downward -->
+      <pose>0 0 1.5 0 0 0</pose>
       <link name="base_link">
+        <gravity>false</gravity>
         <inertial>
           <mass>10.0</mass>
           <inertia>
@@ -133,20 +136,21 @@
             <diffuse>0.9 0.9 0.2 1</diffuse>
           </material>
         </visual>
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>0.2 0.2 0.1</size>
-            </box>
-          </geometry>
-        </collision>
-
-        <!-- Attach 4D Radar System Plugin -->
+      </link>
+        <!-- 4D Radar System Plugin (model-level; <link_name> picks the carrying link) -->
         <plugin
           filename="libgazebo_4d_radar_plugin.so"
           name="gazebo_4d_radar_plugin::Gazebo4DRadarPlugin">
           <sensor_name>radar</sensor_name>
+          <link_name>base_link</link_name>
           <frame_id>radar_link</frame_id>
+          <!-- Radar frame relative to base_link; applied by the plugin (do not re-apply downstream). -->
+          <mounting_pose>0.1 0 0 0 0.174533 0</mounting_pose>
+          <surface model="obstacle_car">
+            <nominal_rcs_dbm2>15.0</nominal_rcs_dbm2>
+            <incidence_exponent>2.0</incidence_exponent>
+            <classification>1</classification>
+          </surface>
           <scan_topic>/radar/scan</scan_topic>
           <pointcloud_topic>/radar/points</pointcloud_topic>
           <cycle_rate_hz>20.0</cycle_rate_hz>
@@ -167,7 +171,8 @@
           <ray_samples_azimuth>120</ray_samples_azimuth>
           <ray_samples_elevation>30</ray_samples_elevation>
         </plugin>
-      </link>
+      <plugin filename="gz-sim-velocity-control-system"
+              name="gz::sim::systems::VelocityControl"/>
     </model>
   </world>
 </sdf>
