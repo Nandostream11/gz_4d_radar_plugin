@@ -35,9 +35,26 @@ $$\begin{bmatrix} \hat{\mathbf{u}}_1^T \\ \hat{\mathbf{u}}_2^T \\ \vdots \\ \hat
    - *An EKF Based Approach to Radar Inertial Odometry*, IEEE International Conference on Multisensor Fusion and Integration (MFI), 2020.
    - Open source implementation: [REVE: Radar Ego-Velocity Estimator](https://github.com/christopherdoer/reve).
 
-4. **Kramer et al., 2022**
-   - *Radar-Inertial State Estimation with Offline Calibration*, IEEE Robotics and Automation Letters (RA-L), 2022.
-   - Tight coupling of 4D radar Doppler measurements with IMU kinematics.
+4. **Kramer et al., 2020**
+   - *Radar-Inertial Ego-Velocity Estimation for Visually Degraded Environments*, IEEE International Conference on Robotics and Automation (ICRA), 2020.
+   - Fuses radar Doppler ego-velocity with IMU data.
 
-5. **Nyquist Velocity Ambiguity Modeling**
-   - *Doppler Velocity Disambiguation in FMCW Automotive Radar Systems*, arXiv:2408.05811.
+5. **Nyquist-zone augmentation for folded Doppler**
+   - arXiv:2408.05811, Section III-A (referenced in the design handoff for handling Doppler folding in the solver).
+
+6. **ARS548 ROS driver** — arXiv:2404.04589 and the `ars548_ros` package: message structures of a real ARS548 detection stream.
+
+---
+
+## 3. Reference Solver Shipped with This Package
+
+`scripts/radar_ego_velocity_estimator.py` implements the Kellner-style 3-point RANSAC
+solver (with least-squares refinement on the inliers) and runs as a ROS 2 node:
+
+```bash
+ros2 run gazebo_4d_radar_plugin radar_ego_velocity_estimator.py
+# subscribes /radar/scan, publishes geometry_msgs/TwistStamped on /radar/ego_velocity
+```
+
+It is also the acceptance test used by `validate_radar_plugin.py` (round-trip
+validation against Gazebo ground truth).

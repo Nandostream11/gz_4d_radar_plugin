@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<!--
+  Validation world for the 4D radar plugin (used by validate_radar_plugin.py).
+
+  A gravity-free platform driven by gz-sim VelocityControl (topic
+  /model/ego_radar_platform/cmd_vel) carries a LEVEL radar 1.5 m above the
+  ground, facing a 0.5 x 40 x 5 m wall at x = 30 m. The radar frame coincides
+  with the platform origin so a pure yaw command is a pure rotation about the
+  radar origin (spec validation item 3).
+-->
+<sdf version="1.9">
+  <world name="radar_validation_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+
+    <light type="directional" name="sun">
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>500 500</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>500 500</size></plane></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="flat_wall">
+      <static>true</static>
+      <pose>30 0 2.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.5 40.0 5.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.5 40.0 5.0</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ego_radar_platform">
+      <pose>0 0 1.5 0 0 0</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial>
+          <mass>10.0</mass>
+          <inertia><ixx>0.1</ixx><iyy>0.1</iyy><izz>0.1</izz></inertia>
+        </inertial>
+        <visual name="visual">
+          <geometry><box><size>0.2 0.2 0.1</size></box></geometry>
+        </visual>
+        <!-- No collision: the platform may drive through the wall in long runs. -->
+      </link>
+        <plugin filename="libgazebo_4d_radar_plugin.so"
+                name="gazebo_4d_radar_plugin::Gazebo4DRadarPlugin">
+          <sensor_name>radar</sensor_name>
+          <link_name>base_link</link_name>
+          <frame_id>radar_link</frame_id>
+          <scan_topic>/radar/scan</scan_topic>
+          <pointcloud_topic>/radar/points</pointcloud_topic>
+          <ground_truth_topic>/radar/ground_truth_velocity</ground_truth_topic>
+          <cycle_rate_hz>20.0</cycle_rate_hz>
+          <max_range_m>150.0</max_range_m>
+          <min_range_m>0.3</min_range_m>
+          <fov_azimuth_rad>2.0944</fov_azimuth_rad>
+          <fov_elevation_rad>0.5236</fov_elevation_rad>
+          <v_max_mps>55.55</v_max_mps>
+          <enable_doppler_folding>true</enable_doppler_folding>
+          <closing_velocity_positive>false</closing_velocity_positive>
+          <range_sigma_m>0.05</range_sigma_m>
+          <azimuth_sigma_rad>0.0</azimuth_sigma_rad>
+          <elevation_sigma_rad>0.0</elevation_sigma_rad>
+          <range_rate_sigma_mps>0.05</range_rate_sigma_mps>
+          <azimuth_resolution_rad>0.0</azimuth_resolution_rad>
+          <elevation_resolution_rad>0.0</elevation_resolution_rad>
+          <false_detection_rate_per_cycle>2.0</false_detection_rate_per_cycle>
+          <detection_dropout_probability>0.03</detection_dropout_probability>
+          <min_rcs_threshold>-30.0</min_rcs_threshold>
+          <ray_samples_azimuth>60</ray_samples_azimuth>
+          <ray_samples_elevation>16</ray_samples_elevation>
+          <random_seed>1234</random_seed>
+        </plugin>
+      <plugin filename="gz-sim-velocity-control-system"
+              name="gz::sim::systems::VelocityControl"/>
+    </model>
+  </world>
+</sdf>

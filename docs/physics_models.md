@@ -33,6 +33,31 @@ $$\dot{\mathbf{p}}_s = \mathbf{0} \implies \dot{\mathbf{r}} = \mathbf{0} \implie
 
 Sensor angular velocity about the sensor frame origin does **not** alter the distance to stationary world targets and therefore does not generate radial Doppler velocity.
 
+### 1.3 Lever Arm (Mounting Offset)
+The radar is mounted at offset $\mathbf{r}_m$ (from `<mounting_pose>`, rotated into the world
+frame) from the origin of the link that carries it. The radar origin therefore moves with
+$$\mathbf{v}_s = \mathbf{v}_{\text{link}} + \boldsymbol{\omega}_{\text{link}} \times \mathbf{r}_m$$
+which is what enters $\dot r$. With zero offset the rotation term vanishes (Section 1.2).
+
+### 1.4 Moving Targets
+For a hit point $\mathbf{p}$ on a moving rigid body (link origin $\mathbf{o}$, linear velocity
+$\mathbf{v}_b$, angular velocity $\boldsymbol{\omega}_b$, all from Gazebo's world-frame velocity
+components), the target velocity is that of the material point:
+$$\mathbf{v}_t = \mathbf{v}_b + \boldsymbol{\omega}_b \times (\mathbf{p} - \mathbf{o})$$
+and $\dot r = (\mathbf{v}_t - \mathbf{v}_s)\cdot\hat{\mathbf{u}}$ as in Section 1.1.
+
+---
+
+## 1b. Scene Geometry
+
+Each cycle a ray fan of `<ray_samples_azimuth>` × `<ray_samples_elevation>` directions
+spanning the field of view is cast from the radar origin. Each ray returns the nearest
+intersection with the world's **collision** shapes (planes, oriented boxes, spheres,
+cylinders, triangle meshes accelerated with a bounding-volume hierarchy), together with the
+true surface normal at the hit — which feeds the incidence-angle model in Section 3.
+Static models are captured once; non-static models have their pose and velocity refreshed
+every cycle. The radar's own model is excluded.
+
 ---
 
 ## 2. FMCW Velocity Ambiguity & Nyquist Doppler Folding
@@ -53,10 +78,19 @@ The plugin implements this non-ideality to ensure downstream estimators (e.g. 3-
 The received power $P_{\text{rx}}$ from a scatterer of Radar Cross Section (RCS) $\sigma$ at range $R$ follows the radar equation:
 $$P_{\text{rx}} = \frac{P_{\text{tx}} G_{\text{tx}} G_{\text{rx}} \lambda^2 \sigma}{(4\pi)^3 R^4}$$
 
-### 3.1 Angle of Incidence & Surface Reflectivity
-For extended diffuse surfaces, apparent RCS incorporates Lambertian cosine scattering and material reflectivity $\rho$:
-$$\sigma_{\text{apparent}} = \sigma_{\text{nominal}} \cdot \cos(\alpha) \cdot \rho$$
-where $\alpha = \arccos(-\hat{\mathbf{u}} \cdot \hat{\mathbf{n}})$ is the incidence angle relative to the surface normal $\hat{\mathbf{n}}$.
+### 3.1 Angle of Incidence, Specularity & Surface Reflectivity
+The apparent return strength combines the incidence angle, a per-surface specularity
+exponent $n$ and the material reflectivity $\rho$:
+$$\sigma_{\text{apparent}} = \sigma_{\text{nominal}} \cdot \cos^{n}(\alpha) \cdot \rho \cdot \left(\frac{R_{\text{ref}}}{\max(R, R_{\text{ref}})}\right)^{k}$$
+where $\alpha = \arccos(-\hat{\mathbf{u}} \cdot \hat{\mathbf{n}})$ is the incidence angle relative
+to the surface normal $\hat{\mathbf{n}}$, $R_{\text{ref}} = 10$ m and $k$ is
+`<power_falloff_exponent>` (4 for the radar equation). In dB this is what the code computes.
+
+- $n = 1$: rough, diffuse (Lambertian) surface — natural terrain still returns at grazing angles.
+- $n \gg 1$: smooth surface (calm water, asphalt, glass) — strong only near normal incidence,
+  so a downward-tilted radar over such surfaces gets few detections, as the design spec requires.
+
+$\cos\alpha$ is clamped to $[0.02, 1]$ to keep the logarithm finite.
 
 ### 3.2 Signal-to-Noise Ratio (SNR) Thresholding
 Detections whose received power or apparent RCS falls below `<min_rcs_threshold>` (in $\text{dBm}^2$) are dropped before output.

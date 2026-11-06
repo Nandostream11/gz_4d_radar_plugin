@@ -32,14 +32,15 @@
           </box>
         </geometry>
       </collision>
+    </link>
 
-      <!-- Generic 4D Radar System Plugin -->
+      <!-- Generic 4D Radar System Plugin (model-level; SDF has no link plugins) -->
       <plugin
         filename="libgazebo_4d_radar_plugin.so"
         name="gazebo_4d_radar_plugin::Gazebo4DRadarPlugin">
         <sensor_name>radar</sensor_name>
+        <link_name>radar_link</link_name>
         <frame_id>radar_link</frame_id>
-        <radar_profile>generic</radar_profile>
         <scan_topic>/radar/scan</scan_topic>
         <pointcloud_topic>/radar/points</pointcloud_topic>
         <publish_radar_scan>true</publish_radar_scan>
@@ -80,6 +81,5 @@
         <ray_samples_azimuth>120</ray_samples_azimuth>
         <ray_samples_elevation>30</ray_samples_elevation>
       </plugin>
-    </link>
   </model>
 </sdf>
