@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(tf2_msgs REQUIRED)
 find_package(radar_msgs REQUIRED)
 find_package(radar_physics_core REQUIRED)
 
@@ -63,12 +64,15 @@ target_link_libraries(${PROJECT_NAME}
   ${std_msgs_TARGETS}
   ${sensor_msgs_TARGETS}
   ${geometry_msgs_TARGETS}
+  ${tf2_msgs_TARGETS}
   ${radar_msgs_TARGETS}
   radar_physics_core::radar_physics_core
 )
 
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY models worlds launch rviz DESTINATION share/${PROJECT_NAME} OPTIONAL)
+# Examples keep their own layout; `ros2 launch` finds their launch files recursively.
+install(DIRECTORY examples DESTINATION share/${PROJECT_NAME} USE_SOURCE_PERMISSIONS)
 install(PROGRAMS
   scripts/radar_ego_velocity_estimator.py
   scripts/validate_radar_plugin.py
@@ -86,5 +90,5 @@ ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/${PROJECT_NAME}.d
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
-ament_export_dependencies(rclcpp std_msgs sensor_msgs geometry_msgs radar_msgs radar_physics_core)
+ament_export_dependencies(rclcpp std_msgs sensor_msgs geometry_msgs tf2_msgs radar_msgs radar_physics_core)
 ament_package()

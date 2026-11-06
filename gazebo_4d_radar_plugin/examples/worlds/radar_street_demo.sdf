@@ -1,0 +1,232 @@
+<?xml version="1.0"?>
+<!--
+  Example: an ego vehicle with a forward-looking 4D radar drives down a street
+  lined with buildings, parked cars and poles while an oncoming car passes in
+  the other lane. Launch with:
+    ros2 launch gazebo_4d_radar_plugin radar_street_demo.launch.py
+-->
+<sdf version="1.9">
+  <world name="radar_street_demo">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+
+    <gui fullscreen="0">
+      <plugin filename="MinimalScene" name="3D View">
+        <gz-gui>
+          <title>3D View</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="string" key="state">docked</property>
+        </gz-gui>
+        <engine>ogre2</engine>
+        <scene>scene</scene>
+        <ambient_light>0.5 0.5 0.5</ambient_light>
+        <background_color>0.75 0.82 0.9</background_color>
+        <camera_pose>-16 -16 12 0 0.45 0.78</camera_pose>
+      </plugin>
+      <plugin filename="GzSceneManager" name="Scene Manager">
+        <gz-gui><property key="state" type="string">floating</property>
+          <property key="width" type="double">5</property><property key="height" type="double">5</property>
+          <property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="InteractiveViewControl" name="Interactive view control">
+        <gz-gui><property key="state" type="string">floating</property>
+          <property key="width" type="double">5</property><property key="height" type="double">5</property>
+          <property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="CameraTracking" name="Camera Tracking">
+        <gz-gui><property key="state" type="string">floating</property>
+          <property key="width" type="double">5</property><property key="height" type="double">5</property>
+          <property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="WorldControl" name="World control">
+        <gz-gui>
+          <title>World control</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="bool" key="resizable">false</property>
+          <property type="double" key="height">72</property>
+          <property type="double" key="width">121</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="left" target="left"/>
+            <line own="bottom" target="bottom"/>
+          </anchors>
+        </gz-gui>
+        <play_pause>true</play_pause>
+        <step>true</step>
+        <start_paused>false</start_paused>
+      </plugin>
+    </gui>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.75 0.82 0.9 1</background>
+      <shadows>false</shadows>
+    </scene>
+
+    <light type="directional" name="sun">
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.4 0.3 -0.9</direction>
+    </light>
+
+    <!-- Ground and road -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>400 400</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>400 400</size></plane></geometry>
+          <material><ambient>0.35 0.45 0.3 1</ambient><diffuse>0.35 0.45 0.3 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="road">
+      <static>true</static>
+      <pose>60 0 0.005 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>160 12 0.01</size></box></geometry>
+          <material><ambient>0.2 0.2 0.22 1</ambient><diffuse>0.2 0.2 0.22 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Buildings, left (y > 0) and right (y < 0) side -->
+    <model name="building_l1"><static>true</static><pose>20 14 5 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>14 8 10</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>14 8 10</size></box></geometry>
+          <material><ambient>0.7 0.55 0.45 1</ambient><diffuse>0.7 0.55 0.45 1</diffuse></material></visual>
+      </link></model>
+    <model name="building_l2"><static>true</static><pose>42 15 7 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>18 10 14</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>18 10 14</size></box></geometry>
+          <material><ambient>0.6 0.6 0.65 1</ambient><diffuse>0.6 0.6 0.65 1</diffuse></material></visual>
+      </link></model>
+    <model name="building_l3"><static>true</static><pose>68 14 4 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>20 8 8</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>20 8 8</size></box></geometry>
+          <material><ambient>0.75 0.7 0.5 1</ambient><diffuse>0.75 0.7 0.5 1</diffuse></material></visual>
+      </link></model>
+    <model name="building_r1"><static>true</static><pose>28 -15 6 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>22 10 12</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>22 10 12</size></box></geometry>
+          <material><ambient>0.55 0.6 0.7 1</ambient><diffuse>0.55 0.6 0.7 1</diffuse></material></visual>
+      </link></model>
+    <model name="building_r2"><static>true</static><pose>58 -14 4.5 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>16 8 9</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>16 8 9</size></box></geometry>
+          <material><ambient>0.7 0.5 0.5 1</ambient><diffuse>0.7 0.5 0.5 1</diffuse></material></visual>
+      </link></model>
+    <model name="water_tower"><static>true</static><pose>85 -12 6 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>3</radius><length>12</length></cylinder></geometry></collision>
+        <visual name="v"><geometry><cylinder><radius>3</radius><length>12</length></cylinder></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- Parked cars along the kerbs -->
+    <model name="parked_car_1"><static>true</static><pose>16 -5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>4.5 1.9 1.5</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>4.5 1.9 1.5</size></box></geometry>
+          <material><ambient>0.1 0.3 0.8 1</ambient><diffuse>0.1 0.3 0.8 1</diffuse></material></visual>
+      </link></model>
+    <model name="parked_car_2"><static>true</static><pose>34 5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>4.5 1.9 1.5</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>4.5 1.9 1.5</size></box></geometry>
+          <material><ambient>0.8 0.8 0.1 1</ambient><diffuse>0.8 0.8 0.1 1</diffuse></material></visual>
+      </link></model>
+    <model name="parked_car_3"><static>true</static><pose>50 -5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>4.5 1.9 1.5</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>4.5 1.9 1.5</size></box></geometry>
+          <material><ambient>0.2 0.7 0.3 1</ambient><diffuse>0.2 0.7 0.3 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- Street lights -->
+    <model name="pole_1"><static>true</static><pose>25 -7 3 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>0.15</radius><length>6</length></cylinder></geometry></collision>
+        <visual name="v"><geometry><cylinder><radius>0.15</radius><length>6</length></cylinder></geometry></visual>
+      </link></model>
+    <model name="pole_2"><static>true</static><pose>45 7 3 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>0.15</radius><length>6</length></cylinder></geometry></collision>
+        <visual name="v"><geometry><cylinder><radius>0.15</radius><length>6</length></cylinder></geometry></visual>
+      </link></model>
+    <model name="pole_3"><static>true</static><pose>65 -7 3 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><cylinder><radius>0.15</radius><length>6</length></cylinder></geometry></collision>
+        <visual name="v"><geometry><cylinder><radius>0.15</radius><length>6</length></cylinder></geometry></visual>
+      </link></model>
+
+    <!-- Oncoming car (left lane), driven by demo_driver.py -->
+    <model name="oncoming_car">
+      <pose>75 2.5 0.8 0 0 3.14159</pose>
+      <link name="link">
+        <gravity>false</gravity>
+        <inertial><mass>1500</mass><inertia><ixx>500</ixx><iyy>2500</iyy><izz>2500</izz></inertia></inertial>
+        <collision name="c"><geometry><box><size>4.5 1.9 1.5</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>4.5 1.9 1.5</size></box></geometry>
+          <material><ambient>0.85 0.1 0.1 1</ambient><diffuse>0.85 0.1 0.1 1</diffuse></material></visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl"/>
+    </model>
+
+    <!-- Ego vehicle with a forward radar on the front bumper -->
+    <model name="ego_vehicle">
+      <pose>0 -2.5 0.8 0 0 0</pose>
+      <link name="base_link">
+        <gravity>false</gravity>
+        <inertial><mass>1500</mass><inertia><ixx>500</ixx><iyy>2500</iyy><izz>2500</izz></inertia></inertial>
+        <visual name="body">
+          <geometry><box><size>4.5 1.9 1.5</size></box></geometry>
+          <material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse></material>
+        </visual>
+        <visual name="radar">
+          <pose>2.3 0 -0.2 0 0 0</pose>
+          <geometry><box><size>0.1 0.3 0.15</size></box></geometry>
+          <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+        </visual>
+      </link>
+      <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl"/>
+      <plugin filename="libgazebo_4d_radar_plugin.so"
+              name="gazebo_4d_radar_plugin::Gazebo4DRadarPlugin">
+        <sensor_name>front_radar</sensor_name>
+        <link_name>base_link</link_name>
+        <mounting_pose>2.35 0 -0.2 0 0.05 0</mounting_pose>
+        <frame_id>radar_link</frame_id>
+        <publish_tf>true</publish_tf>
+        <tf_parent_frame>world</tf_parent_frame>
+        <cycle_rate_hz>20.0</cycle_rate_hz>
+        <max_range_m>120.0</max_range_m>
+        <fov_azimuth_rad>2.0944</fov_azimuth_rad>
+        <fov_elevation_rad>0.35</fov_elevation_rad>
+        <ray_samples_azimuth>160</ray_samples_azimuth>
+        <ray_samples_elevation>20</ray_samples_elevation>
+        <false_detection_rate_per_cycle>3.0</false_detection_rate_per_cycle>
+        <min_rcs_threshold>-35.0</min_rcs_threshold>
+        <surface model="oncoming_car">
+          <nominal_rcs_dbm2>15.0</nominal_rcs_dbm2>
+          <classification>1</classification>
+        </surface>
+      </plugin>
+    </model>
+  </world>
+</sdf>

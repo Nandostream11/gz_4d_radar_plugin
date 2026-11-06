@@ -15,6 +15,13 @@ It is built for developing and testing **radar ego-velocity estimators** (Kellne
 3-point Doppler RANSAC), radar-inertial odometry and radar perception pipelines, where
 the solver must behave the same in simulation as on hardware.
 
+![Street demo: Gazebo scene (left) and the radar point cloud in RViz coloured by Doppler (right)](docs/media/radar_street_demo.gif)
+
+*[Street demo](gazebo_4d_radar_plugin/examples/): the radar on a car driving down a street.
+Static objects (green/cyan) all close at the car's own speed; the oncoming car (orange)
+stands out by its Doppler alone. Run it with
+`ros2 launch gazebo_4d_radar_plugin radar_street_demo.launch.py`.*
+
 ![Validation: Doppler cosine profile on a wall, and Doppler folding at 60 m/s](docs/images/validation_plot.png)
 
 *Plugin output inside Gazebo vs. the analytic model. Left: wall returns at 5 m/s follow
@@ -50,7 +57,7 @@ fold to the negative side. Scattered points are the configured Poisson false det
 ## Quick Start (Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic)
 
 ```bash
-sudo apt install ros-jazzy-ros-gz ros-jazzy-radar-msgs python3-numpy python3-matplotlib
+sudo apt install ros-jazzy-ros-gz ros-jazzy-radar-msgs ros-jazzy-rviz2 python3-numpy python3-matplotlib
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
 git clone https://github.com/Nandostream11/gz_4d_radar_plugin.git
 cd ~/ros2_ws && colcon build && source install/setup.bash
@@ -179,6 +186,7 @@ closing targets have **negative** range-rate (`closing_velocity_positive` flips 
 | `<detection_dropout_probability>` | `0.03` | Probability of dropping a true detection |
 | `<random_seed>` | time-based | Seed for reproducible runs |
 | `<ignore_own_model>` | `true` | Ignore collisions of the model carrying the radar |
+| `<publish_tf>` / `<tf_parent_frame>` | `false` / `world` | Broadcast `tf_parent_frame → frame_id` from the true radar pose (handy for RViz) |
 | `<default_surface>` / `<ground_surface>` | refl 1.0, RCS 10 / refl 0.8, RCS 5 | Surface properties for non-plane / plane collisions: `reflectivity`, `nominal_rcs_dbm2`, `incidence_exponent`, `classification` |
 | `<surface model="...">` | – | Per-model override of the same four fields (repeatable) |
 
@@ -192,6 +200,7 @@ closing targets have **negative** range-rate (`closing_velocity_positive` flips 
 | `radar_terrain_world.sdf` | Drone at ~30 m AGL, radar 45° down over the reconstructed terrain mesh |
 | `radar_validation_world.sdf` | Level radar facing a wall — used by the validation script |
 | `radar_moving_target_world.sdf` | Parked radar, box driven toward it — moving-target check |
+| `examples/worlds/radar_street_demo.sdf` | Street demo with buildings, parked cars and an oncoming car ([examples](gazebo_4d_radar_plugin/examples/)) |
 
 ---
 

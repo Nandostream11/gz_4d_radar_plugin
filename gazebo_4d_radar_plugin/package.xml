@@ -13,6 +13,7 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>tf2_msgs</depend>
   <depend>radar_msgs</depend>
   <depend>radar_physics_core</depend>
   <depend>gz_sim_vendor</depend>

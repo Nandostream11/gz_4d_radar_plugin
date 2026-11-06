@@ -118,6 +118,8 @@ void Gazebo4DRadarPlugin::ParseSdfParameters(const std::shared_ptr<const sdf::El
   get_bool("publish_radar_scan", publish_radar_scan_);
   get_bool("publish_pointcloud", publish_pointcloud_);
   get_bool("publish_ground_truth", publish_ground_truth_);
+  get_bool("publish_tf", publish_tf_);
+  get_str("tf_parent_frame", tf_parent_frame_);
   get_bool("ignore_own_model", ignore_own_model_);
   if (sdf->HasElement("mounting_pose")) {
     mounting_pose_ = sdf->Get<gz::math::Pose3d>("mounting_pose");
@@ -247,6 +249,10 @@ void Gazebo4DRadarPlugin::InitializeRos() {
   if (publish_ground_truth_) {
     ground_truth_pub_ =
         ros_node_->create_publisher<geometry_msgs::msg::TwistStamped>(ground_truth_topic_, qos);
+  }
+  if (publish_tf_) {
+    // Same QoS as tf2_ros::TransformBroadcaster.
+    tf_pub_ = ros_node_->create_publisher<tf2_msgs::msg::TFMessage>("/tf", rclcpp::QoS(100));
   }
 }
 
@@ -671,6 +677,23 @@ void Gazebo4DRadarPlugin::PublishRosMessages(const std::vector<rpc::RadarDetecti
       ++ix; ++iy; ++iz; ++idop; ++ir; ++iaz; ++iel; ++ircs;
     }
     pointcloud_pub_->publish(cloud);
+  }
+
+  if (tf_pub_) {
+    tf2_msgs::msg::TFMessage tf;
+    geometry_msgs::msg::TransformStamped t;
+    t.header.stamp = header.stamp;
+    t.header.frame_id = tf_parent_frame_;
+    t.child_frame_id = frame_id_;
+    t.transform.translation.x = sensor_pose.Pos().X();
+    t.transform.translation.y = sensor_pose.Pos().Y();
+    t.transform.translation.z = sensor_pose.Pos().Z();
+    t.transform.rotation.w = sensor_pose.Rot().W();
+    t.transform.rotation.x = sensor_pose.Rot().X();
+    t.transform.rotation.y = sensor_pose.Rot().Y();
+    t.transform.rotation.z = sensor_pose.Rot().Z();
+    tf.transforms.push_back(t);
+    tf_pub_->publish(tf);
   }
 
   if (ground_truth_pub_) {

@@ -19,6 +19,7 @@
 #include <radar_msgs/msg/radar_scan.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <tf2_msgs/msg/tf_message.hpp>
 
 #include "radar_physics_core/radar_physics.hpp"
 #include "radar_physics_core/radar_types.hpp"
@@ -108,6 +109,9 @@ class Gazebo4DRadarPlugin
   bool publish_radar_scan_{true};
   bool publish_pointcloud_{true};
   bool publish_ground_truth_{true};
+  /// Broadcast tf_parent_frame -> frame_id from the true radar pose (for RViz demos).
+  bool publish_tf_{false};
+  std::string tf_parent_frame_{"world"};
   bool ignore_own_model_{true};
   /// Pose of the radar frame relative to the link the plugin is attached to.
   /// The plugin applies it; downstream consumers must NOT apply it again.
@@ -149,6 +153,7 @@ class Gazebo4DRadarPlugin
   rclcpp::Publisher<radar_msgs::msg::RadarScan>::SharedPtr scan_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr ground_truth_pub_;
+  rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr tf_pub_;
 };
 
 }  // namespace gazebo_4d_radar_plugin
